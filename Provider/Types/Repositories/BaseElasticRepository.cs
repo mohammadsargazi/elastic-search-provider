@@ -158,9 +158,17 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return response.Documents.ToList();
     }
 
-    public Task<List<T>> ListAsync(List<Guid?> ids, CancellationToken cancellationToken)
+    public async Task<List<T>> ListAsync(List<Guid?> ids, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.SearchAsync<T>(s => s
+        .Index(GetIndexName())
+        .Query(q => q.Terms(t => t.Field(f => f.Id).Terms(ids.Where(id => id.HasValue).Select(id => id.Value))))
+        .Size(ids.Count)
+        .RequestConfiguration(r => r.ThrowExceptions()));
+
+        if (!response.IsValid) throw new Exception($"Error occurred while searching: {response.ServerError}");
+
+        return response.Documents.ToList();
     }
 
     public Task<List<T>> ListAsync(List<Guid> ids, CancellationToken cancellationToken)
