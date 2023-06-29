@@ -138,9 +138,11 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return response.Documents.FirstOrDefault();
     }
 
-    public Task<T?> SingleOrDefaultAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<T?> SingleOrDefaultAsync(Guid id, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.GetAsync(new DocumentPath<T>(
+            new Id(id)), x => x.Index(GetIndexName()), cancellationToken);
+        return response?.Source;
     }
 
     public Task<T> SingleAsync(Guid id, CancellationToken cancellationToken)
