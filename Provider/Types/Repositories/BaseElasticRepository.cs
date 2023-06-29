@@ -71,9 +71,20 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
 
     }
 
-    public Task<UpdatedResult<T>> UpdateAsync(T entity, CancellationToken cancellationToken)
+    public async Task<UpdatedResult<T>> UpdateAsync(T entity, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var oldVersion = entity.Version;
+        entity = entity with { UpdateOn = DateTimeOffset.Now, Version = Guid.NewGuid() };
+
+        var response = await ElasticClient.UpdateAsync<T>(new DocumentPath<T>(entity.Id), u => u
+            .Index(GetIndexName())
+            .Script(s => s
+                .Source($"if (ctx._source.version == '{oldVersion}') {{ ctx._source = params.newEntity; }} else {{ throw new Exception('Invalid version'); }}")
+                .Params(p => p.Add("newEntity", entity))));
+
+        if (response.Result == Result.Error) throw new InvalidOperationException(_localizer["Concurrency exception"]);
+
+        return entity.ToUpdateResult(response.Result, _localizer);
     }
 
     public Task<List<UpdatedResult<T>>> UpdateAllAsync(List<T> entities, CancellationToken cancellationToken)
