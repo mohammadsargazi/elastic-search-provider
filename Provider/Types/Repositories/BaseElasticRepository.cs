@@ -132,9 +132,10 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return new IncrementResult(response.IsValid);
     }
 
-    public Task<T?> FirstOrDefaultAsync(CancellationToken cancellationToken)
+    public async Task<T?> FirstOrDefaultAsync(CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.SearchAsync<T>(u => u.Index(GetIndexName()).Query(q => q.MatchAll()).Size(1).TrackTotalHits(false), cancellationToken);
+        return response.Documents.FirstOrDefault();
     }
 
     public Task<T?> SingleOrDefaultAsync(Guid id, CancellationToken cancellationToken)
