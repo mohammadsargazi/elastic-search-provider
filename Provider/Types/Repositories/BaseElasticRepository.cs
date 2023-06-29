@@ -193,8 +193,10 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return new PagedData<T>(response.Documents.ToList(), response.Total);
     }
 
-    public Task<long> CountAsync()
+    public async Task<long> CountAsync()
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.CountAsync<T>(c => c.Index(GetIndexName()));
+
+        return response.Count;
     }
 }
