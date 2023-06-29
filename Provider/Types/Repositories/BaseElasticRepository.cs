@@ -26,9 +26,24 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
 
     public abstract Task<CanDeleteResult> CanDelete(T entity, CancellationToken cancellationToken);
 
-    public Task<DeletedResult> DeleteAsync(T entity, CancellationToken cancellationToken)
+    public async Task<DeletedResult> DeleteAsync(T entity, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        if (entity == null) throw new ArgumentNullException(nameof(entity));
+
+        var can = await CanDelete(entity, cancellationToken).ConfigureAwait(false);
+
+        if (!can.CanDelete) throw new InvalidOperationException(can.Message);
+
+        var response = await ElasticClient.UpdateAsync<T>(new DocumentPath<T>(entity.Id), u => u
+          .Index(GetIndexName())
+          .Script(s => s
+              .Source("if (ctx._source.version == params.version) { ctx.op = 'delete' }")
+              .Params(p => p.Add("version", entity.Version))
+              ));
+
+        if (response.Result == Result.Updated) throw new InvalidOperationException(_localizer["Concurrency exception"]);
+
+        return new DeletedResult(can, response.IsValid ? 1 : 0);
     }
 
     public Task<InsertResult<T>> InsertAsync(T entity, CancellationToken cancellationToken)
