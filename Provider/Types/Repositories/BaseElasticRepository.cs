@@ -171,9 +171,12 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return response.Documents.ToList();
     }
 
-    public Task<List<T>> ListAsync(List<Guid> ids, CancellationToken cancellationToken)
+    public async Task<List<T>> ListAsync(List<Guid> ids, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.SearchAsync<T>(u =>
+            u.Index(GetIndexName()).Query(q =>
+                q.Terms(t => t.Field(f => f.Id).Terms(ids))), cancellationToken);
+        return response.Documents.ToList();
     }
 
     public Task<IPagedData<T>> ListPagedAsync(IPagedRequest request, CancellationToken cancellationToken)
