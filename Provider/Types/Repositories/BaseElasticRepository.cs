@@ -54,9 +54,21 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return response.ToInsertResult(entity, _localizer);
     }
 
-    public Task<List<InsertResult<T>>> InsertAllAsync(List<T> entities, CancellationToken cancellationToken)
+    public async Task<List<InsertResult<T>>> InsertAllAsync(List<T> entities, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        if (!entities.Any())
+            throw new ArgumentNullException(nameof(entities));
+
+        var response = await ElasticClient.BulkAsync(b => b
+            .Index(GetIndexName())
+            .CreateMany(entities), cancellationToken);
+
+        return entities.Select(entity =>
+        {
+            var success = !response.ItemsWithErrors.Any(item => item.Id == entity.Id.ToString());
+            return entity.ToInsertResult(success, _localizer);
+        }).ToList();
+
     }
 
     public Task<UpdatedResult<T>> UpdateAsync(T entity, CancellationToken cancellationToken)
