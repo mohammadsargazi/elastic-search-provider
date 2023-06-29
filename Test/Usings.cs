@@ -7,3 +7,5 @@ global using Provider.Types.Entities;
 global using Provider.Types.Repositories;
 global using Provider.Results;
 global using Test.Entities;
+global using Test.Base;
+global using Test.Repositories;
