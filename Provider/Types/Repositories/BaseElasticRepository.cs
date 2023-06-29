@@ -179,9 +179,18 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return response.Documents.ToList();
     }
 
-    public Task<IPagedData<T>> ListPagedAsync(IPagedRequest request, CancellationToken cancellationToken)
+    public async Task<IPagedData<T>> ListPagedAsync(IPagedRequest request, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var from = (request.Page - 1) * request.PageSize;
+        var size = request.PageSize;
+
+        var response = await ElasticClient.SearchAsync<T>(u => u
+             .Index(GetIndexName())
+             .From(from)
+             .Size(size)
+             .Query(q => q.MatchAll()), cancellationToken);
+
+        return new PagedData<T>(response.Documents.ToList(), response.Total);
     }
 
     public Task<long> CountAsync()
