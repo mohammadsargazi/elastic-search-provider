@@ -87,9 +87,36 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return entity.ToUpdateResult(response.Result, _localizer);
     }
 
-    public Task<List<UpdatedResult<T>>> UpdateAllAsync(List<T> entities, CancellationToken cancellationToken)
+    public async Task<List<UpdatedResult<T>>> UpdateAllAsync(List<T> entities, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var bulkDescriptor = new BulkDescriptor();
+        var versionDictionary = new Dictionary<Guid, Guid>();
+
+        foreach (var entity in entities)
+        {
+            var oldVersion = entity.Version;
+            var updatedEntity = entity with { UpdateOn = DateTimeOffset.Now, Version = Guid.NewGuid() };
+
+            versionDictionary.Add(entity.Id, entity.Version);
+
+            bulkDescriptor.Update<T>(u => u
+                .Id(entity.Id)
+                .Index(GetIndexName())
+                .Script(s => s
+                    .Source($"if (ctx._source.version == '{oldVersion}') {{ ctx._source = params.newEntity; }} else {{ throw new Exception('Invalid version'); }}")
+                    .Params(p => p.Add("newEntity", updatedEntity))
+                ));
+        }
+
+        var bulkResponse = await ElasticClient.BulkAsync(bulkDescriptor);
+
+        if (bulkResponse.Errors) throw new InvalidOperationException(_localizer["Concurrency exception"]);
+
+        return entities.Select(entity =>
+        {
+            var success = !bulkResponse.ItemsWithErrors.Any(item => item.Id == entity.Id.ToString());
+            return entity.ToUpdateResult(success, _localizer);
+        }).ToList();
     }
 
     public Task<IncrementResult> IncrementAsync(Guid id, string field, Guid version, double amount = 1)
