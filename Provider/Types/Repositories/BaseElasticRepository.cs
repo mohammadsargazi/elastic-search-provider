@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Localization;
+﻿using Elasticsearch.Net;
+using Microsoft.Extensions.Localization;
 using Nest;
 using Provider.Contracts;
+using Provider.Extensions;
 using Provider.Results;
 using Provider.Types.Entities;
 
@@ -46,9 +48,10 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         return new DeletedResult(can, response.IsValid ? 1 : 0);
     }
 
-    public Task<InsertResult<T>> InsertAsync(T entity, CancellationToken cancellationToken)
+    public virtual async Task<InsertResult<T>> InsertAsync(T entity, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.IndexAsync(entity, x => x.Index(GetIndexName()).Refresh(Refresh.WaitFor), cancellationToken).ConfigureAwait(false);
+        return response.ToInsertResult(entity, _localizer);
     }
 
     public Task<List<InsertResult<T>>> InsertAllAsync(List<T> entities, CancellationToken cancellationToken)
