@@ -119,9 +119,17 @@ public abstract class BaseElasticRepository<T> : IBaseRepository<T> where T : Ba
         }).ToList();
     }
 
-    public Task<IncrementResult> IncrementAsync(Guid id, string field, Guid version, double amount = 1)
+    public async Task<IncrementResult> IncrementAsync(Guid id, string field, Guid version, double amount = 1)
     {
-        throw new NotImplementedException();
+        var response = await ElasticClient.UpdateAsync<T>(id, u => u
+        .Index(GetIndexName())
+        .Script(s => s
+        .Source($"if (ctx._source.version == '{version}')  {{ctx._source.{field} += params.amount }}  else {{ throw new Exception('Invalid version');  }}")
+        .Params(p => p.Add("amount", amount))));
+
+        if (response.Result == Result.Error) throw new InvalidOperationException(_localizer["Concurrency exception"]);
+
+        return new IncrementResult(response.IsValid);
     }
 
     public Task<T?> FirstOrDefaultAsync(CancellationToken cancellationToken)
