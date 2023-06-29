@@ -5,3 +5,5 @@ global using Nest;
 global using Provider.Configuration;
 global using Provider.Types.Entities;
 global using Provider.Types.Repositories;
+global using Provider.Results;
+global using Test.Entities;
