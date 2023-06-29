@@ -52,6 +52,7 @@ await repository.UpdateAsync(retrievedEntity, cancellationToken);
 await repository.DeleteAsync(retrievedEntity, cancellationToken);
 
 // Perform other operations as needed
+```
 
 
 ## API Reference
