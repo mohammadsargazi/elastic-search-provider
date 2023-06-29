@@ -53,7 +53,9 @@ await repository.DeleteAsync(retrievedEntity, cancellationToken);
 
 // Perform other operations as needed
 
-API Reference
+
+## API Reference
+
 --------------
 The following methods are available in the `BaseElasticRepository` class:
 
@@ -77,7 +79,7 @@ The following methods are available in the `BaseElasticRepository` class:
 Please refer to the source code and method documentation for more detailed information about each method's usage and parameters.
 
 
-Contributing
+## Contributing
 ------------
 Contributions to this ElasticSearch provider are welcome! If you have any ideas, improvements, or bug fixes, please follow these steps:
 
